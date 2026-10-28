@@ -1,9 +1,9 @@
 import { useState, useContext } from "react";
 import { CircularProgress, Alert, Collapse } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
-import axios from "axios";
 import { useNavigate, Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
+import API from "../services/api";
 import "../index.css";
 
 export default function Login() {
@@ -19,7 +19,7 @@ export default function Login() {
     e.preventDefault();
     setError(""); setLoading(true);
     try {
-      const res = await axios.post("https://sustainability-outcome-measurement-system.onrender.com/api/auth/login", { email, password });
+      const res = await API.post("/auth/login", { email, password });
       localStorage.setItem("user", JSON.stringify(res.data));
       setUser(res.data);
       navigate("/dashboard");

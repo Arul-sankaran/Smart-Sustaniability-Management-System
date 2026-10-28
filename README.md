@@ -408,8 +408,8 @@ Copy `server/.env.example` to `server/.env` and replace placeholders with your o
 Important notes:
 
 - `server/.env.example` contains placeholders only; replace them with your own values.
-- The client does not use a separate `.env` file for backend URL management; the API base URL is hardcoded in `client/src/services/api.js` for local development.
-- If you deploy the app, update the frontend URL to the correct production server.
+- The client uses `REACT_APP_API_URL` for the backend API base URL. It defaults to the existing Render API at `https://sustainability-outcome-measurement-system.onrender.com/api`.
+- For local development, set `REACT_APP_API_URL=http://localhost:4000/api` in `client/.env.local`. For a different deployment, set it to that backend's `/api` URL in the frontend hosting provider's environment settings and rebuild the client.
 
 ## 11. Running the Application
 
@@ -942,7 +942,7 @@ The repository is not a production-grade hardened system by default. Some items 
 - No explicit CSRF protection layer was implemented
 - No automated dependency or vulnerability scanning file was found
 - No container hardening or reverse-proxy security configuration was included in the repo
-- The frontend currently references a hardcoded local API URL in `client/src/services/api.js` for the local environment
+- The frontend requires a reachable API base URL; configure `REACT_APP_API_URL` for each deployment environment when the default Render API is not the intended backend.
 
 ### Recommended production checklist
 
@@ -957,7 +957,7 @@ The repository is not a production-grade hardened system by default. Some items 
 ## 21. Development Notes and Known Limitations
 
 - The project is organized as a multi-package app rather than a single monorepo package.
-- The front-end base URL is hardcoded for local development in `client/src/services/api.js`.
+- The front-end API base URL is configurable with `REACT_APP_API_URL`; it defaults to the existing Render API URL.
 - Some logic is intentionally implemented as server-side checks for resource alerts and scheduled digests.
 - The app is useful as a sustainability operations dashboard but it is not a full enterprise-grade ESG platform out of the box.
 

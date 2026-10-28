@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { CircularProgress, Alert, Collapse } from "@mui/material";
 import { Visibility, VisibilityOff, CheckCircle } from "@mui/icons-material";
-import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
+import API from "../services/api";
 import "../index.css";
 
 export default function Register() {
@@ -33,7 +33,7 @@ export default function Register() {
     if (form.password.length < 6)       return setError("Password must be at least 6 characters.");
     setLoading(true);
     try {
-      await axios.post("https://sustainability-outcome-measurement-system.onrender.com/api/auth/register", {
+      await API.post("/auth/register", {
         name:form.name, email:form.email, password:form.password,
       });
       setSuccess(true);
