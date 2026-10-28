@@ -7,6 +7,7 @@ import Dashboard       from "./pages/Dashboard";
 import Dataentry       from "./pages/Dataentry";
 import Goals           from "./pages/Goals";
 import Ideas           from "./pages/Ideas";
+import Insights        from "./pages/Insights";
 import User            from "./pages/User";
 import Navbar          from "./components/Navbar";
 import ProtectedRoutes from "./components/ProtectedRoutes";
@@ -46,6 +47,9 @@ function App() {
           }/>
           <Route path="/ideas" element={
             <ProtectedRoutes roles={["admin","staff","student"]}><Ideas /></ProtectedRoutes>
+          }/>
+          <Route path="/insights" element={
+            <ProtectedRoutes roles={["admin","staff","student"]}><Insights /></ProtectedRoutes>
           }/>
           <Route path="/users" element={
             <ProtectedRoutes roles={["admin"]}><User /></ProtectedRoutes>

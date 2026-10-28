@@ -37,6 +37,8 @@ app.use("/api/users", require("./routes/user.js"));
 app.use("/api/usage", require("./routes/resource.js"));
 app.use("/api/goals", require("./routes/goal.js"));
 app.use("/api/ideas", require("./routes/idea.js"));
+app.use("/api/insights", require("./routes/insights.js"));
+app.use("/api/notifications", require("./routes/notifications.js"));
 
 // Error Handler (Always last middleware)
 app.use(errorHandler);
@@ -46,4 +48,5 @@ const PORT = process.env.PORT || 4000;
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  require("./utils/scheduler.js").startDailyDigestJob();
 });

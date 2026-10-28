@@ -10,8 +10,12 @@ import {
 } from "chart.js";
 import { Bar } from "react-chartjs-2";
 import { PieChart } from "@mui/x-charts/PieChart";
+import { Button, CircularProgress as MuiSpinner } from "@mui/material";
+import PictureAsPdfOutlinedIcon from "@mui/icons-material/PictureAsPdfOutlined";
 import API from "../services/api";
 import { AuthContext } from "../context/AuthContext";
+import { generateUsageReport } from "../utils/generateReport";
+import { checkGoalUsageThresholds } from "../utils/sendNotificationEmail";
 import "../index.css";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Tooltip, Legend, Filler);
@@ -129,14 +133,19 @@ export default function Dashboard() {
   const [summary, setSummary] = useState([]);
   const [monthly, setMonthly] = useState([]);
   const [goals,   setGoals]   = useState([]);
+  const [reportLoading, setReportLoading] = useState(false);
 
-  const [emBarFilter,    setEmBarFilter]    = useState(PRESET_12);
-  const [elecBarFilter,  setElecBarFilter]  = useState(PRESET_12);
-  const [waterBarFilter, setWaterBarFilter] = useState(PRESET_12);
-  const [wasteBarFilter, setWasteBarFilter] = useState(PRESET_12);
+  const [emBarFilter,    setEmBarFilter]    = useState(PRESET_6);
+  const [elecBarFilter,  setElecBarFilter]  = useState(PRESET_6);
+  const [waterBarFilter, setWaterBarFilter] = useState(PRESET_6);
+  const [wasteBarFilter, setWasteBarFilter] = useState(PRESET_6);
   const [emPieFilter,    setEmPieFilter]    = useState(PRESET_12);
 
   useEffect(() => { fetchData(); }, []);
+
+  useEffect(() => {
+    checkGoalUsageThresholds(goals);
+  }, [goals]);
 
   const fetchData = async () => {
     try {
@@ -145,6 +154,50 @@ export default function Dashboard() {
       setMonthly(uRes.data.monthly || []);
       setGoals(gRes.data           || []);
     } catch (e) { console.error(e); }
+  };
+
+  const handleDownloadReport = async () => {
+    setReportLoading(true);
+    try {
+      // Forecasts are available to every role; alerts are admin-only, so we
+      // fetch that one separately and just leave it out of the report if it 403s.
+      const forecastEntries = await Promise.all(
+        ["water", "electricity", "waste"].map(async (category) => {
+          try {
+            const { data } = await API.get(`/insights/forecast?category=${category}`);
+            return [category, data];
+          } catch {
+            return [category, null];
+          }
+        })
+      );
+      const forecasts = Object.fromEntries(forecastEntries);
+
+      let alerts = [];
+      if (user?.role === "admin") {
+        try {
+          const { data } = await API.get("/insights/alerts");
+          alerts = data.alerts || [];
+        } catch {
+          // not fatal — report just won't include the alerts section
+        }
+      }
+
+      // Block-wise section needs the raw records (admin/staff only) — skipped if unavailable
+      let usageRecords = [];
+      try {
+        const { data } = await API.get("/usage/all");
+        usageRecords = Array.isArray(data) ? data : [];
+      } catch {
+        // not fatal — report just won't include the block-wise section
+      }
+
+      generateUsageReport({ summary, monthly, goals, forecasts, alerts, usageRecords, generatedBy: user?.name || "" });
+    } catch (e) {
+      console.error("Report generation failed:", e);
+    } finally {
+      setReportLoading(false);
+    }
   };
 
   const waterGoal = goals.find(g => g.category === "water")?.target       || 0;
@@ -269,17 +322,33 @@ export default function Dashboard() {
     <div className="dash">
 
       {/* HEADER */}
-      <Box className="row" sx={{ mb: 3.5 }}>
-        <div className="dash-live-badge">
-          <div className="dash-live-dot" />
-          Live Dashboard
-        </div>
-        <Typography sx={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 800, fontSize: { xs: "1.7rem", md: "2.1rem" }, color: C.text, lineHeight: 1.1, mb: "5px" }}>
-          Sustainability Dashboard
-        </Typography>
-        <Typography sx={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: "0.88rem", color: C.sub }}>
-          Welcome back, <strong style={{ color: C.text }}>{user?.name || "User"}</strong> — track campus resource consumption and environmental targets.
-        </Typography>
+      <Box className="row" sx={{ mb: 3.5, display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 2 }}>
+        <Box>
+          <div className="dash-live-badge">
+            <div className="dash-live-dot" />
+            Live Dashboard
+          </div>
+          <Typography sx={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 800, fontSize: { xs: "1.7rem", md: "2.1rem" }, color: C.text, lineHeight: 1.1, mb: "5px" }}>
+            Sustainability Dashboard
+          </Typography>
+          <Typography sx={{ fontFamily: "'Plus Jakarta Sans',sans-serif", fontSize: "0.88rem", color: C.sub }}>
+            Welcome back, <strong style={{ color: C.text }}>{user?.name || "User"}</strong> — track campus resource consumption and environmental targets.
+          </Typography>
+        </Box>
+
+        <Button
+          variant="contained"
+          onClick={handleDownloadReport}
+          disabled={reportLoading}
+          startIcon={reportLoading ? <MuiSpinner size={16} sx={{ color: "#fff" }} /> : <PictureAsPdfOutlinedIcon sx={{ fontSize: 18 }} />}
+          sx={{
+            textTransform: "none", bgcolor: C.forest, fontFamily: "'Plus Jakarta Sans',sans-serif", fontWeight: 700,
+            fontSize: "0.82rem", boxShadow: "none", px: 2.2, py: 1,
+            "&:hover": { bgcolor: "#0A2015", boxShadow: "none" },
+          }}
+        >
+          {reportLoading ? "Generating..." : "Download PDF Report"}
+        </Button>
       </Box>
 
       {/* ROW 1 — GOALS */}

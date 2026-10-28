@@ -1,8 +1,10 @@
 require("dotenv").config();
 
 const express = require("express");
-const { Usage } = require("../models/model.js");
+const { Usage, LOCATIONS } = require("../models/model.js");
 const { protect, authorize } = require("../middleware/authMiddleware");
+const { getCategoryAlert } = require("../utils/alertCheck.js");
+const { notifyInstantAlert, clearAlertRecord } = require("../utils/notify.js");
 
 const router = express.Router();
 
@@ -12,14 +14,19 @@ const router = express.Router();
 // ─────────────────────────────────────────────
 router.post("/", protect, authorize("admin", "staff"), async (req, res) => {
   try {
-    const { category, amount, unit, usageDate, submittedBy } = req.body;
+    const { category, location, amount, unit, usageDate, submittedBy } = req.body;
 
     if (!category || amount === undefined || !unit || !usageDate) {
       return res.status(400).json({ message: "All fields required" });
     }
 
+    if (!location || !LOCATIONS.includes(location)) {
+      return res.status(400).json({ message: `Location is required. Choose one of: ${LOCATIONS.join(", ")}` });
+    }
+
     const usage = await Usage.create({
       category,
+      location,
       amount,
       unit,
       // ── FIX 1: always store usageDate as a proper Date object ──
@@ -29,11 +36,32 @@ router.post("/", protect, authorize("admin", "staff"), async (req, res) => {
     });
 
     res.status(201).json(usage);
+
+    // Fire-and-forget: check if this entry pushed the category over/near its
+    // threshold and notify admins+staff if so. Runs after the response is
+    // already sent so it never slows down the person entering data.
+    checkAndNotify(category);
   } catch (error) {
     console.error("POST /usage error:", error.message);
     res.status(500).json({ message: "Server error" });
   }
 });
+
+// Checks a category's current alert status and notifies (or clears a
+// stale notification record) accordingly. Never throws — a notification
+// failure should never be visible to the person who just logged usage.
+async function checkAndNotify(category) {
+  try {
+    const alert = await getCategoryAlert(category);
+    if (alert) {
+      await notifyInstantAlert(alert);
+    } else {
+      await clearAlertRecord(category);
+    }
+  } catch (error) {
+    console.error("checkAndNotify error:", error.message);
+  }
+}
 
 // ─────────────────────────────────────────────
 // GET /api/usage/all — Get all usage records for table
@@ -124,16 +152,21 @@ router.get("/dashboard", protect, async (req, res) => {
 // Access: admin, staff
 router.put("/:id", protect, authorize("admin", "staff"), async (req, res) => {
   try {
-    const { category, amount, unit, usageDate } = req.body;
+    const { category, location, amount, unit, usageDate } = req.body;
 
     if (!category || amount === undefined || !unit || !usageDate) {
       return res.status(400).json({ message: "All fields required" });
+    }
+
+    if (!location || !LOCATIONS.includes(location)) {
+      return res.status(400).json({ message: `Location is required. Choose one of: ${LOCATIONS.join(", ")}` });
     }
 
     const updated = await Usage.findByIdAndUpdate(
       req.params.id,
       {
         category,
+        location,
         amount,
         unit,
         // ── FIX 1: ensure Date object on edit too ──
@@ -147,6 +180,7 @@ router.put("/:id", protect, authorize("admin", "staff"), async (req, res) => {
     }
 
     res.json(updated);
+    checkAndNotify(category);
   } catch (error) {
     res.status(500).json({ message: "Server error" });
   }

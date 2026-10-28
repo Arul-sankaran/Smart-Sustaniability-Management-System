@@ -10,6 +10,8 @@ import EditNoteIcon             from "@mui/icons-material/EditNote";
 import TrackChangesIcon         from "@mui/icons-material/TrackChanges";
 import EmojiObjectsOutlinedIcon from "@mui/icons-material/EmojiObjectsOutlined";
 import PeopleAltOutlinedIcon    from "@mui/icons-material/PeopleAltOutlined";
+import AutoAwesomeOutlinedIcon  from "@mui/icons-material/AutoAwesomeOutlined";
+import NotificationBell from "./NotificationBell";
 import "../index.css";
 
 const ROLE_STYLE = {
@@ -23,6 +25,7 @@ const ALL_LINKS = [
   { label:"Data Entry", path:"/dataentry", icon:<EditNoteIcon             sx={{fontSize:17}}/>, roles:["admin","staff"] },
   { label:"Goals",      path:"/goals",     icon:<TrackChangesIcon         sx={{fontSize:17}}/>, roles:["admin","staff"] },
   { label:"Ideas",      path:"/ideas",     icon:<EmojiObjectsOutlinedIcon sx={{fontSize:17}}/>, roles:["admin","staff","student"] },
+  { label:"Insights",   path:"/insights",  icon:<AutoAwesomeOutlinedIcon  sx={{fontSize:17}}/>, roles:["admin","staff","student"] },
   { label:"Users",      path:"/users",     icon:<PeopleAltOutlinedIcon    sx={{fontSize:17}}/>, roles:["admin"] },
 ];
 
@@ -63,6 +66,7 @@ export default function Navbar() {
 
         {/* Right */}
         <div className="eco-nav-right">
+          <NotificationBell />
           <div className="eco-user-block">
             <Avatar sx={{
               width:30, height:30, fontSize:"0.75rem", fontWeight:800,
